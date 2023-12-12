@@ -168,6 +168,44 @@ end
 
 TODO:
 
+## Errors
+
+For error
+
+```
+ActionView::Template::Error: Devise could not find the `Warden::Proxy` instance on your request environment.
+Make sure that your application is loading Devise and Warden as expected and that the `Warden::Manager` middleware is present in your middleware stack.
+If you are seeing this on one of your tests, ensure that your tests are either executing the Rails middleware stack or that your tests are using the `Devise::Test::ControllerHelpers` module to inject the `request.env['warden']` object for you.
+    app/controllers/application_controller.rb:143:in `current_user'
+```
+
+the problem is that background hotwire rendering does not know who is the
+current_user so the solution it to pass as a parameter in places where you
+render partials
+
+```
+# app/views/layouts/main_bell.html.erb
+<%#
+  user: required, use it instead current_user, since this is rendered from background
+%>
+
+
+# app/models/interest.rb
+class Interest < ApplicationRecord
+  after_update_commit(lambda do
+    broadcast_replace_to(
+      "main-bell-stream-for-profile-id-#{user_id}",
+      target: 'main-bell',
+      partial: 'layouts/main_bell',
+      locals: {
+        user: user
+      }
+    )
+  end
+end
+```
+
+
 ## Test
 
 Test authenticate_user
